@@ -1,4 +1,3 @@
-# syntax=dockerfile:1
 #
 # 纯后端镜像（无前端）：API 服务 + 内嵌 SQLite。
 # 前端（plus-ui）由 GitHub Pages 独立部署（.github/workflows/pages.yml），
