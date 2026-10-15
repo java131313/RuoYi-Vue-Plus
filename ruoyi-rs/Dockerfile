@@ -19,10 +19,11 @@ RUN cargo build --release \
     && mkdir -p /build/data
 
 # ---------- Stage 2: runtime ----------
-FROM gcr.io/distroless/static-debian12:nonroot
+# alpine 而非 distroless：Sealos 等国内环境通常无法访问 gcr.io，体积代价仅数 MB
+FROM alpine:3.21
+RUN adduser -D -u 10001 ruoyi && mkdir -p /ruoyi/data && chown ruoyi:ruoyi /ruoyi/data
 WORKDIR /ruoyi
-COPY --from=server --chown=nonroot:nonroot /build/target/release/ruoyi-rs /ruoyi/ruoyi-rs
-COPY --from=server --chown=nonroot:nonroot /build/data                    /ruoyi/data
+COPY --from=server /build/target/release/ruoyi-rs /ruoyi/ruoyi-rs
 ENV PORT=8080 \
     DB_PATH=/ruoyi/data/ruoyi.db \
     WEB_DIR=/ruoyi/web/dist \
@@ -32,5 +33,5 @@ ENV PORT=8080 \
 # 前端可选挂载：-v $PWD/dist:/ruoyi/web/dist:ro（同时把 CORS_ORIGIN 设为前端来源）
 VOLUME ["/ruoyi/data"]
 EXPOSE 8080
-USER nonroot
+USER ruoyi
 ENTRYPOINT ["/ruoyi/ruoyi-rs"]
