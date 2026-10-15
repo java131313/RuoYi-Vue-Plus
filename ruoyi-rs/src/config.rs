@@ -16,6 +16,9 @@ pub struct Config {
     /// login fail lock: max retries and lock minutes
     pub pwd_max_retry: u32,
     pub pwd_lock_minutes: u64,
+    /// Allowed CORS origin(s) for cross-site frontends (e.g. GitHub Pages).
+    /// Empty = same-origin only. "*" = any origin. Comma list = those origins.
+    pub cors_origin: String,
 }
 
 impl Config {
@@ -30,6 +33,7 @@ impl Config {
             "71EAE522D34B47E6A039B2265A1ED345C7A347A9D14A48B51B7AFBB75BCEB304".into()
         });
         let captcha_enabled = env::var("CAPTCHA_ENABLED").map(|v| v != "false").unwrap_or(true);
+        let cors_origin = env::var("CORS_ORIGIN").unwrap_or_default();
         Self {
             port,
             db_path,
@@ -39,6 +43,7 @@ impl Config {
             captcha_enabled,
             pwd_max_retry: 5,
             pwd_lock_minutes: 10,
+            cors_origin,
         }
     }
 }

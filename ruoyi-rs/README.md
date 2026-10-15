@@ -71,6 +71,20 @@ cd plus-ui && pnpm install && pnpm dev
 | `UPLOAD_DIR` | `web/uploads` | 头像等上传文件目录（`/uploads/` 静态服务） |
 | `JWT_SECRET` | 与 Java 版 yml 相同的演示值 | **生产必须覆盖** |
 | `CAPTCHA_ENABLED` | `true` | 数学验证码开关 |
+| `CORS_ORIGIN` | 空（不开启） | 允许跨域来源：`*` 任意；或逗号分隔列表，如 `https://java131313.github.io` |
+
+## GitHub Pages 部署（前端 Pages + 后端自托管）
+
+GitHub Pages 只托管静态文件，后端跑在自己的服务器（GHCR 镜像）或任意公网主机：
+
+1. 后端容器开启 CORS：`docker run -e CORS_ORIGIN=https://java131313.github.io ...`（必须 HTTPS，Pages 会拦截 http 混合内容）
+2. 仓库设置：`Settings → Pages → Source` 选 **GitHub Actions**；
+   `Settings → Secrets and variables → Actions → Variables` 新建
+   `RUOYI_RS_BACKEND_URL=https://你的后端域名`
+3. push 或手动触发 `.github/workflows/pages.yml`（workflow 文件的注释里有完整步骤）
+
+workflow 会克隆 plus-ui 5.X，`VITE_APP_BASE_API` 指向你的后端、`VITE_APP_CONTEXT_PATH=/<repo>/`
+适配 Pages 子路径，构建产物直接发布。访问地址 `https://<owner>.github.io/<repo>/`。
 
 ## CI
 

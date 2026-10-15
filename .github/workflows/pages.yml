@@ -1,0 +1,75 @@
+name: pages
+
+# 将 plus-ui 前端构建并部署到 GitHub Pages（https://<owner>.github.io/<repo>/）。
+# 后端 ruoyi-rs 不运行在 Pages 上：它跑在你自己的服务器（GHCR 镜像）或任意
+# 可公网访问的主机，本 workflow 构建时把前端 API 地址指向它。
+#
+# 首次使用需要在仓库设置中：
+#   Settings → Pages → Source 选择 "GitHub Actions"
+#   Settings → Secrets and variables → Actions → Variables
+#     新建变量 RUOYI_RS_BACKEND_URL = 后端地址，如 https://ruoyi-rs.example.com
+#       （不设置则回退 /prod-api 相对路径，仅同域部署可用）
+# 注意：Pages 是 HTTPS，后端也必须 HTTPS，否则浏览器会拦截混合内容请求。
+# 后端需配置环境变量 CORS_ORIGIN=https://<owner>.github.io（或 * 仅供测试）。
+
+on:
+  push:
+    branches: ["5.X"]
+    paths: [".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  PLUS_UI_REF: 5.X
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Clone plus-ui (${{ env.PLUS_UI_REF }})
+        run: git clone --depth 1 --branch "${PLUS_UI_REF}" https://github.com/JavaLionLi/plus-ui.git ui
+
+      - name: Build plus-ui (API 指向后端, base 指向 /<repo>/)
+        working-directory: ui
+        env:
+          # 项目 Pages 站点挂在 /<repo>/ 子路径，资源与路由 base 必须一致
+          VITE_APP_CONTEXT_PATH: /${{ github.event.repository.name }}/
+          # 后端地址：仓库变量 RUOYI_RS_BACKEND_URL，未设置时回退相对路径
+          VITE_APP_BASE_API: ${{ vars.RUOYI_RS_BACKEND_URL || '/prod-api' }}
+        run: |
+          corepack enable
+          pnpm install --no-frozen-lockfile --config.strict-dep-builds=false
+          NODE_OPTIONS=--max-old-space-size=4096 pnpm run build:prod
+
+      - name: SPA fallback (GitHub Pages 无 rewrite，用 404.html 兜底层路由)
+        run: cp ui/dist/index.html ui/dist/404.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ui/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

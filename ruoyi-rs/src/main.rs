@@ -152,13 +152,31 @@ async fn main() {
 
     let api = api_router();
     let api_bare = api.clone().layer(axum::middleware::from_fn(web::spa_document_guard));
-    let app = Router::new()
+    let mut app = Router::new()
         // plus-ui production builds call /prod-api/** (nginx strips the prefix
         // in the Java deployment; here the server handles both spellings).
         .nest("/prod-api", api)
         .merge(api_bare)
-        .fallback(web::static_handler)
-        .with_state(state);
+        .fallback(web::static_handler);
+    // Optional CORS (e.g. GitHub Pages frontend calling this backend directly).
+    if !cfg.cors_origin.is_empty() {
+        use tower_http::cors::{Any, CorsLayer};
+        let cors = if cfg.cors_origin.trim() == "*" {
+            CorsLayer::new().allow_origin(Any)
+        } else {
+            let origins: Vec<axum::http::HeaderValue> = cfg
+                .cors_origin
+                .split(',')
+                .filter_map(|o| o.trim().parse().ok())
+                .collect();
+            CorsLayer::new().allow_origin(origins)
+        };
+        let cors = cors
+            .allow_methods([axum::http::Method::GET, axum::http::Method::POST, axum::http::Method::PUT, axum::http::Method::DELETE, axum::http::Method::OPTIONS])
+            .allow_headers(Any);
+        app = app.layer(cors);
+    }
+    let app = app.with_state(state);
 
     let addr = format!("0.0.0.0:{}", cfg.port);
     let listener = TcpListener::bind(&addr).await.expect("bind failed");
