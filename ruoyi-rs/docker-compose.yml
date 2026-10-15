@@ -1,0 +1,18 @@
+# 一体化运行（可选）：根目录的 script/docker/docker-compose.yml 是 Java 版依赖编排，
+# 本文件只运行 Rust 一体化镜像（自带 SQLite，无需 MySQL/Redis）。
+services:
+  ruoyi-rs:
+    image: ghcr.io/java131313/ruoyi-vue-plus-rs:latest
+    container_name: ruoyi-rs
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Asia/Shanghai
+      # JWT_SECRET: 请在生产环境覆盖默认值
+      # CAPTCHA_ENABLED: "true"
+    volumes:
+      - ruoyi-data:/ruoyi/data
+    restart: unless-stopped
+
+volumes:
+  ruoyi-data:

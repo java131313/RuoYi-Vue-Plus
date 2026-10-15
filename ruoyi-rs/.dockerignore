@@ -1,0 +1,7 @@
+target
+web
+data
+*.db
+*.db-wal
+*.db-shm
+nohup.out

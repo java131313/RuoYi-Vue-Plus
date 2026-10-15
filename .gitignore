@@ -50,3 +50,8 @@ nbdist/
 !*/build/*.xml
 
 .flattened-pom.xml
+
+### ruoyi-rs (Rust backend)
+ruoyi-rs/data/
+ruoyi-rs/web/
+ruoyi-rs/nohup.out
