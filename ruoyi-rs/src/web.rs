@@ -48,7 +48,15 @@ pub async fn static_handler(State(st): State<Shared>, uri: Uri) -> Response {
     }
     if path.is_empty() || path == "index.html" {
         let index = Path::new(&st.cfg.web_dir).join("index.html");
-        return serve_file(&index, "text/html; charset=utf-8").await;
+        if index.await_file().await {
+            return serve_file(&index, "text/html; charset=utf-8").await;
+        }
+        // backend-only image (e.g. Sealos): no frontend bundled
+        return (
+            [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+            "ruoyi-rs API 运行中。此镜像未内置前端：前端部署见 GitHub Pages，或挂载 dist 到 WEB_DIR。",
+        )
+            .into_response();
     }
     let safe: String = path.chars().filter(|c| *c != '\\').collect();
     if safe.contains("..") {

@@ -26,17 +26,21 @@
 
 ## 快速开始
 
-### Docker（推荐）
+### Docker（纯后端镜像）
+
+镜像**不再内置前端**（构建快、体积小，适合 Sealos 等云平台部署）；
+前端由 GitHub Pages 独立部署并通过 `CORS_ORIGIN` 跨域调用本服务。
 
 ```bash
-# 本地构建（vite 构建需要约 4GB 内存，请确保 Docker 分配 ≥ 6GB；GitHub Actions 无此问题）
-docker build -t ruoyi-rs ./ruoyi-rs
-docker run -d -p 8080:8080 -v ruoyi-data:/ruoyi/data --name ruoyi-rs ruoyi-rs
+# 直接使用 GHCR 镜像（GitHub Actions 自动构建）
+docker run -d -p 8080:8080 -v ruoyi-data:/ruoyi/data   -e CORS_ORIGIN=https://java131313.github.io   ghcr.io/java131313/ruoyi-vue-plus-rs:latest
 
-# 或直接使用 GHCR 镜像（GitHub Actions 自动构建）
-docker run -d -p 8080:8080 -v ruoyi-data:/ruoyi/data \
-  ghcr.io/java131313/ruoyi-vue-plus-rs:latest
+# 本地构建
+docker build -t ruoyi-rs ./ruoyi-rs
 ```
+
+如需镜像同时托管前端，挂载构建好的 dist 即可：
+`docker run ... -v $PWD/dist:/ruoyi/web/dist:ro`
 
 打开 http://localhost:8080 ，账号 `admin / admin123`（另有 `test / 666666`、`test1 / 666666` 用于数据权限演示）。
 

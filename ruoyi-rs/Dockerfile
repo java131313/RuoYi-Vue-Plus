@@ -1,27 +1,14 @@
-# syntax=docker/dockerfile:1
+# syntax=dockerfile:1
 #
-# All-in-one image: plus-ui frontend (built from the official repo, unchanged)
-# + Rust backend (musl static binary) + embedded SQLite.
+# 纯后端镜像（无前端）：API 服务 + 内嵌 SQLite。
+# 前端（plus-ui）由 GitHub Pages 独立部署（.github/workflows/pages.yml），
+# 通过 CORS_ORIGIN 允许跨域调用本服务；如需自建前端，挂载 dist 到 WEB_DIR 即可。
 #
 #   docker build -t ruoyi-rs ./ruoyi-rs
-#   docker run -d -p 8080:8080 -v ruoyi-data:/ruoyi/data ruoyi-rs
+#   docker run -d -p 8080:8080 -v ruoyi-data:/ruoyi/data \
+#     -e CORS_ORIGIN=https://<owner>.github.io ruoyi-rs
 
-# ---------- Stage 1: frontend ----------
-FROM node:20-alpine AS web
-RUN apk add --no-cache git
-ARG PLUS_UI_REPO=https://github.com/JavaLionLi/plus-ui.git
-ARG PLUS_UI_REF=5.X
-RUN git clone --depth 1 --branch "${PLUS_UI_REF}" "${PLUS_UI_REPO}" /ui
-WORKDIR /ui
-# 5.X does not pin a packageManager, so corepack resolves a recent pnpm whose
-# default blocks dependency build scripts (ERR_PNPM_IGNORED_BUILDS).
-# strict-dep-builds=false keeps install non-interactive; unknown in older
-# pnpm versions it is simply ignored (they only warn).
-RUN corepack enable \
-    && pnpm install --no-frozen-lockfile --config.strict-dep-builds=false \
-    && NODE_OPTIONS=--max-old-space-size=4096 pnpm run build:prod
-
-# ---------- Stage 2: Rust backend (static musl binary) ----------
+# ---------- Stage 1: Rust backend (static musl binary) ----------
 FROM rust:1.94-alpine AS server
 RUN apk add --no-cache musl-dev
 WORKDIR /build
@@ -32,17 +19,18 @@ RUN cargo build --release \
     && strip target/release/ruoyi-rs \
     && mkdir -p /build/data
 
-# ---------- Stage 3: runtime ----------
+# ---------- Stage 2: runtime ----------
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /ruoyi
 COPY --from=server --chown=nonroot:nonroot /build/target/release/ruoyi-rs /ruoyi/ruoyi-rs
 COPY --from=server --chown=nonroot:nonroot /build/data                    /ruoyi/data
-COPY --from=web    --chown=nonroot:nonroot /ui/dist                       /ruoyi/web/dist
 ENV PORT=8080 \
     DB_PATH=/ruoyi/data/ruoyi.db \
     WEB_DIR=/ruoyi/web/dist \
     UPLOAD_DIR=/ruoyi/data/uploads \
-    CAPTCHA_ENABLED=true
+    CAPTCHA_ENABLED=true \
+    CORS_ORIGIN=
+# 前端可选挂载：-v $PWD/dist:/ruoyi/web/dist:ro（同时把 CORS_ORIGIN 设为前端来源）
 VOLUME ["/ruoyi/data"]
 EXPOSE 8080
 USER nonroot

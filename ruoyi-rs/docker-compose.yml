@@ -1,5 +1,5 @@
-# 一体化运行（可选）：根目录的 script/docker/docker-compose.yml 是 Java 版依赖编排，
-# 本文件只运行 Rust 一体化镜像（自带 SQLite，无需 MySQL/Redis）。
+# 纯后端运行：镜像不再内置前端（前端由 GitHub Pages 部署，见 .github/workflows/pages.yml）。
+# 本服务自带 SQLite，无需 MySQL/Redis；CORS_ORIGIN 按你的前端来源填写。
 services:
   ruoyi-rs:
     image: ghcr.io/java131313/ruoyi-vue-plus-rs:latest
